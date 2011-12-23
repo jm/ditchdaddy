@@ -1,0 +1,146 @@
+#!/usr/bin/env ruby
+
+require 'rubygems'
+
+require 'rainbow'
+require 'rest-client'
+require 'rexml/document'
+require 'highline/import'
+
+class Namecheap
+  def self.ip
+    @ip ||= RestClient.get("http://whatismyip.org/")
+  end
+  
+  def self.get_domains(username, api_key)
+    url = "https://api.namecheap.com/xml.response?ApiUser=#{username}&ApiKey=#{api_key}&UserName=#{username}&Command=namecheap.domains.getList&ClientIp=#{ip}"
+    check_response(RestClient.get(url))
+  end
+  
+  def self.initiate_transfer(domain, authorization_code, username, api_key)
+    url = "https://api.namecheap.com/xml.response?ApiUser=#{username}&ApiKey=#{api_key}&UserName=#{username}&Command=namecheap.domains.transfer.create&ClientIp=#{ip}&DomainName=#{domain}&Years=1&EPPCode=#{authorization_code}"
+    check_response(RestClient.get(url))
+  end
+  
+  def self.check_response(response)
+    puts response
+    unless REXML::Document.new(response).root.attributes['Status'] == 'OK'
+      raise "Error from Namecheap!"
+    end
+  end
+end
+
+# We can only transfer these TLD's via Namecheap's API
+GOOD_TLDS = [".com", ".net", ".org", ".info", ".biz", ".us", 
+              ".ca", ".cc", ".cn", ".com.cn," ".net.cn", 
+              ".org.cn", ".co.uk", ".org.uk", ".me.uk", 
+              ".de", ".co", ".mobi" ]
+
+if RUBY_VERSION < "1.9"
+  puts
+  puts "--- ATTENTION ---".color(:red).bright.blink
+  puts "You appear to be on Ruby 1.8.  Highline acts weird on 1.8 when retrying after an exception."
+  puts "I recommend you hop up to 1.9.2.  But it's OK.  Whatever.  It's not like I know"
+  puts "anything about how I run or anything.  NO NO.  DONT LISTEN TO ME."
+  puts "--- ATTENTION ---".color(:red).bright.blink
+  puts
+  require 'fastercsv'
+  CSVModule = FasterCSV
+else
+  require 'csv'
+  CSVModule = CSV
+end
+
+puts "Ready to ditch GoDaddy for Namecheap?" + "  LET'S DO THIS THING.".color(:red).bright
+puts
+
+puts "First, I need your Namecheap details.".color(:magenta)
+username = nil
+api_key = nil
+
+begin
+  username = ask("What's your username?".bright)
+  api_key = ask("What's your API key?".bright)
+
+  Namecheap.get_domains(username, api_key)
+rescue
+  puts
+  puts "ZOMG WTF AUTHENTICATION FAILED!!!".color(:red).bright.blink
+  puts
+  
+  retry
+end
+  
+puts "\nOK, you're verified now.".color(:yellow) + "  Magical, I know, right?\n".bright.color(:yellow)
+puts
+
+file_path = nil
+begin
+  puts "Next, tell me where your data export from GoDaddy is at.\n(Follow instructions here: http://is.gd/2vI0aV)\n".color(:magenta)
+
+  file_path = ask("Where is the data file at?".bright)
+  puts File.join(Dir.pwd, file_path)
+  unless File.exists?(file_path)
+    raise "File fail."
+  end
+rescue
+  puts
+  puts "ZOMG WTF FILE NOT FOUND!!!".color(:red).bright.blink
+  puts
+  
+  retry
+end
+
+puts "\nFile found, now slurpinating it.".bright.color(:yellow)
+
+csv = CSVModule.new(File.open(file_path), :headers => true, :skip_blanks => true)
+
+puts
+puts "OK, this is getting serious now."
+puts "Should I just transfer every domain I can or ask you about each one?".color(:cyan).bright
+
+ask = ask("Say 'ask' or 'transfer': ") {|q| q.validate = /(^ask$)|(^transfer$)/ }
+ask = (ask == "ask")
+
+puts
+
+csv.each do |row|  
+  if ask
+    response = ask("Transfer " + row['DomainName'].bright.color(:yellow) + " to Namecheap? (yes/no)") {|q| q.validate = /(^yes$)|(^no$)/ }
+    if response == 'no'
+      puts "\tOK, cow(boy|girl).  Skipping that guy..."
+      puts
+      
+      next
+    end
+  end
+  
+  puts "Transferring #{row['DomainName'].bright.color(:yellow)}..."
+  if row['Locked'] != 'Unlocked'
+    puts "\t!".color(:red).bright + " Oops.  You didn't unlock that domain according to this export.  Skipping..."
+    next
+  end
+  
+  unless GOOD_TLDS.include?(row['TLD'])
+    puts "\t!".color(:red).bright + " O NOEZ.  You can't actually transfer a domain with the TLD #{row['TLD']} via the API.  Skipping..."
+  end
+  
+  begin
+    Namecheap.initiate_transfer(row['DomainName'], row['AuthorizationCode'], username, api_key)
+    puts "\t*".color(:cyan).bright + " That worked!"
+  rescue StandardError
+    puts "\t! Well, poop.  There seems to be an error.".color(:red)    
+  end
+end
+
+puts
+puts "Well, we're all done.  Our time together was magical.".color(:cyan)
+puts "I hope it was as good for you as it was for me.  ktnxbai"
+puts "Visit me at http://arcturo.com sometime."
+puts
+puts "--- IMPORTANT ---".color(:magenta).bright.blink
+puts "To speed up the process, follow the instructions here for"
+puts "explicitly approving the transfers: http://is.gd/ZRBLUP"
+puts "Takes much less time than the 5 days it normally takes."
+puts "--- IMPORTANT ---".color(:magenta).bright.blink
+puts
