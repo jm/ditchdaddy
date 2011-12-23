@@ -93,6 +93,8 @@ if DNSimple::Contact.all.empty?
       puts "WHAT DID YOU DO?".bright.color(:red) + " Something broke.".color(:red)
       puts "Maybe you put in some bad data.  Let's try this again."
       puts
+      
+      retry
     end
   end
   
