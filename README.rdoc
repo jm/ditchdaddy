@@ -6,6 +6,14 @@
 
 Bye GoDaddy, hello DNSimple.  (Will accept patches for other registrars!  Just make another binscript and rename this one)
 
+This will walk you through the steps to move your domains to DNSimple.  
+
+1) It will ask for your DNSimple details to log you in. 
+2) The script will then make sure that you have a contact registered that these domains can be registered to (if not, it helps you create one).
+3) Next, you'll need to unlock your domains and get a data export from GoDaddy with the authorization codes (you can follow the instructions here: http://is.gd/2vI0aV).  Unfortunately, GoDaddy does not offer an API for that.
+4) Then the transfers cometh.  You can either transfer the whole export in one shot or have it ask you about each one.  It uses the DNSimple API to create the transfer orders.
+5) Lastly, it praises you gloriously for your hard work and shows you how to speed the transfers up.
+
 == SYNOPSIS:
 
   ditchdaddy # follow the prompts
