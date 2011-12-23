@@ -1,0 +1,183 @@
+#!/usr/bin/env ruby
+
+require 'rubygems'
+
+require 'rainbow'
+require 'net/http'
+require 'highline/import'
+require 'dnsimple'
+
+# We can't transfer these via the API for 
+# one reason or another
+BAD_TLDS = [".us", ".aero", ".ca"]
+
+if RUBY_VERSION < "1.9"
+  puts
+  puts "--- ATTENTION ---".color(:red).bright.blink
+  puts "You appear to be on Ruby 1.8.  Highline acts weird on 1.8 when retrying after an exception."
+  puts "I recommend you hop up to 1.9.2.  But it's OK.  Whatever.  It's not like I know"
+  puts "anything about how I run or anything.  NO NO.  DONT LISTEN TO ME."
+  puts "--- ATTENTION ---".color(:red).bright.blink
+  puts
+  require 'fastercsv'
+  CSVModule = FasterCSV
+else
+  require 'csv'
+  CSVModule = CSV
+end
+
+puts "Ready to ditch GoDaddy?" + "  LET'S DO THIS THING.".color(:red).bright
+puts
+
+puts "First, I need your DNSimple details.".color(:magenta)
+user = nil
+begin
+  DNSimple::Client.username = ask("What's your username?".bright)
+  DNSimple::Client.password = ask("What's your password?".bright) { |q| q.echo = "*" }
+
+  user = DNSimple::User.me
+rescue DNSimple::AuthenticationFailed
+  puts
+  puts "ZOMG WTF AUTHENTICATION FAILED!!!".color(:red).bright.blink
+  puts
+  
+  retry
+end
+  
+puts "\nOK, you're logged in now.".color(:yellow) + "  Amazing, I know, right?\n".bright.color(:yellow)
+
+contact = nil
+if DNSimple::Contact.all.empty?
+  puts "Hm, well it turns out you don't have contacts setup in DNSimple."
+  puts "You can either setup one up on dnsimple.com or we can do it here."
+  puts
+  puts "What say ye?  Do it here or the web?".color(:magenta)
+  choice = ask("Say 'here' or 'web': ") {|q| q.validate = /(^here$)|(^web$)/ }
+  
+  if choice == 'web'
+    puts
+    puts "PEACE OUT FOR NOW!".bright.color(:blue).blink.italic.background(:yellow)
+    puts "You come back now, ya here?"
+    puts
+    
+    exit
+  end
+  
+  puts
+  puts "OK, let's get the data we need...".bright.color(:cyan)
+
+  begin
+    fn = ask("First name: ") {|q| q.validate = /.+/ }
+    ln = ask("Last name: ") {|q| q.validate = /.+/ }
+    address = ask("Address: ") {|q| q.validate = /.+/ }
+    city = ask("City: ") {|q| q.validate = /.+/ }
+    state = ask("State: ") {|q| q.validate = /.+/ }
+    postal_code = ask("Postal code: ") {|q| q.validate = /.+/ }
+    country = ask("Country: ") {|q| q.validate = /.+/ }
+    email_address = ask("E-mail: ") {|q| q.validate = /.+/ }
+    phone = ask("Phone: ") {|q| q.validate = /.+/ }
+  
+    begin
+      contact = DNSimple::Contact.create({
+        :first_name => fn,
+        :last_name => ln,
+        :address1 => address,
+        :city => city,
+        :state_province => state,
+        :country => country,
+        :postal_code => postal_code,
+        :email_address => email_address,
+        :phone => phone
+      })
+    rescue DNSimple::Error
+      puts "WHAT DID YOU DO?".bright.color(:red) + " Something broke.".color(:red)
+      puts "Maybe you put in some bad data.  Let's try this again."
+      puts
+    end
+  end
+  
+  puts
+  puts "Yay!".color(:yellow).bright + " Contact created."
+  puts
+end
+
+unless contact
+  contacts = DNSimple::Contact.all
+  
+  puts "You have to pick a registrant for your domains."
+  puts
+  choose do |menu|
+    menu.prompt = "CHOOSE ONE.  QUICKLY.".bright.color(:magenta)
+
+    contacts.each do |possible_contact|
+      menu.choice("#{possible_contact.first_name} #{possible_contact.last_name}") { contact = possible_contact }
+    end
+  end
+end
+
+puts
+
+file_path = nil
+begin
+  puts "Next, tell me where your data export from GoDaddy is at.\n(Follow instructions here: http://is.gd/2vI0aV)\n".color(:magenta)
+
+  file_path = ask("Where is the data file at?".bright)
+  puts File.join(Dir.pwd, file_path)
+  unless File.exists?(file_path)
+    raise "File fail."
+  end
+rescue
+  puts
+  puts "ZOMG WTF FILE NOT FOUND!!!".color(:red).bright.blink
+  puts
+  
+  retry
+end
+
+puts "\nFile found, now slurpinating it.".bright.color(:yellow)
+
+csv = CSVModule.new(File.open(file_path), :headers => true, :skip_blanks => true)
+
+puts
+puts "OK, this is getting serious now."
+puts "Should I just transfer every domain I can or ask you about each one?".color(:cyan).bright
+
+ask = ask("Say 'ask' or 'transfer': ") {|q| q.validate = /(^ask$)|(^transfer$)/ }
+ask = (ask == "ask")
+
+puts
+
+csv.each do |row|  
+  if ask
+    response = ask("Transfer " + row['DomainName'].bright.color(:yellow) + " to DNSimple? (yes/no)") {|q| q.validate = /(^yes$)|(^no$)/ }
+    if response == 'no'
+      puts "\tOK, cow(boy|girl).  Skipping that guy..."
+      puts
+      
+      next
+    end
+  end
+  
+  puts "Transferring #{row['DomainName'].bright.color(:yellow)}..."
+  if row['Locked'] != 'Unlocked'
+    puts "\t!".color(:red).bright + " Oops.  You didn't unlock that domain according to this export.  Skipping..."
+    next
+  end
+  
+  begin
+    DNSimple::TransferOrder.create(row['DomainName'], row['AuthorizationCode'], {:id => contact.id})
+    puts "\t*".color(:cyan).bright + " That worked!"
+  rescue StandardError
+    # There's a bug in the DNSimple gem...
+    puts "\t! Well, poop.  There seems to be an error.".color(:red)    
+  rescue DNSimple::Error => e
+    puts "\tWell, poop.  There seems to be an error.".color(:red)
+    puts "\t#{e.message}"
+  end
+end
+
+puts
+puts "Well, we're all done.  Our time together was magical.".color(:cyan)
+puts "I hope it was as good for you as it was for me.  ktnxbai"
+puts "Visit me at http://arcturo.com sometime."
+puts

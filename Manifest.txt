@@ -1,0 +1,13 @@
+History.txt
+Manifest.txt
+PostInstall.txt
+README.rdoc
+Rakefile
+bin/ditchdaddy
+lib/ditchdaddy.rb
+script/console
+script/destroy
+script/generate
+test/test_ditchdaddy.rb
+test/test_ditchdaddy_cli.rb
+test/test_helper.rb
