@@ -164,6 +164,10 @@ csv.each do |row|
     next
   end
   
+  if BAD_TLDS.include?(row['TLD'])
+    puts "\t!".color(:red).bright + " O NOEZ.  You can't actually transfer a domain with the TLD #{row['TLD']} via the API.  Skipping..."
+  end
+  
   begin
     DNSimple::TransferOrder.create(row['DomainName'], row['AuthorizationCode'], {:id => contact.id})
     puts "\t*".color(:cyan).bright + " That worked!"
