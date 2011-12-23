@@ -4,7 +4,7 @@
 
 == DESCRIPTION:
 
-Bye GoDaddy, hello DNSimple.
+Bye GoDaddy, hello DNSimple.  (Will accept patches for other registrars!  Just make another binscript and rename this one)
 
 == SYNOPSIS:
 

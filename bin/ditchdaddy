@@ -181,3 +181,9 @@ puts "Well, we're all done.  Our time together was magical.".color(:cyan)
 puts "I hope it was as good for you as it was for me.  ktnxbai"
 puts "Visit me at http://arcturo.com sometime."
 puts
+puts "--- IMPORTANT ---".color(:magenta).bright.blink
+puts "To speed up the process, follow the instructions here for"
+puts "explicitly approving the transfers: http://is.gd/ZRBLUP"
+puts "Takes much less time than the 5 days it normally takes."
+puts "--- IMPORTANT ---".color(:magenta).bright.blink
+puts
