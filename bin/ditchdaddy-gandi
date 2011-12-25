@@ -3,7 +3,6 @@
 require 'rubygems'
 
 require 'rainbow'
-require 'rest-client'
 require 'highline/import'
 require 'xmlrpc/client'
 
