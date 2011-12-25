@@ -4,38 +4,52 @@
 
 == DESCRIPTION:
 
-Bye GoDaddy, hello DNSimple/Namecheap.  (Will accept patches for other registrars!  Just make another binscript)
+Bye GoDaddy, hello DNSimple/Namecheap/Gandi.  (Will accept patches for other registrars!  Just make another binscript)
 
 === DNSimple
 
 The +ditchdaddy-dnsimple+ script will walk you through the steps to move your domains to DNSimple.  
 
-1) It will ask for your DNSimple details to log you in. 
-2) The script will then make sure that you have a contact registered that these domains can be registered to (if not, it helps you create one).
-3) Next, you'll need to unlock your domains and get a data export from GoDaddy with the authorization codes (you can follow the instructions here: http://is.gd/2vI0aV).  Unfortunately, GoDaddy does not offer an API for that.
-4) Then the transfers cometh.  You can either transfer the whole export in one shot or have it ask you about each one.  It uses the DNSimple API to create the transfer orders.
-5) Lastly, it praises you gloriously for your hard work and shows you how to speed the transfers up.
+1. It will ask for your DNSimple details to log you in. 
+2. The script will then make sure that you have a contact registered that these domains can be registered to (if not, it helps you create one).
+3. Next, you'll need to unlock your domains and get a data export from GoDaddy with the authorization codes (you can follow the instructions here: http://is.gd/2vI0aV).  Unfortunately, GoDaddy does not offer an API for that.
+4. Then the transfers cometh.  You can either transfer the whole export in one shot or have it ask you about each one.  It uses the DNSimple API to create the transfer orders.
+5. Lastly, it praises you gloriously for your hard work and shows you how to speed the transfers up.
 
 === Namecheap
 
-1) It will ask for your Namecheap details (turn on API access as detailed here: http://is.gd/MpVI5T) 
-2) Next, you'll need to unlock your domains and get a data export from GoDaddy with the authorization codes (you can follow the instructions here: http://is.gd/2vI0aV).  Unfortunately, GoDaddy does not offer an API for that.
-3) Then the transfers cometh.  You can either transfer the whole export in one shot or have it ask you about each one.  It uses the DNSimple API to create the transfer orders.
-4) Lastly, it praises you gloriously for your hard work and shows you how to speed the transfers up.
+The +ditchdaddy-namecheap+ script will walk you through the steps to move your domains to Namecheap.  
+
+1. It will ask for your Namecheap details (turn on API access as detailed here: http://is.gd/MpVI5T) 
+2. Next, you'll need to unlock your domains and get a data export from GoDaddy with the authorization codes (you can follow the instructions here: http://is.gd/2vI0aV).  Unfortunately, GoDaddy does not offer an API for that.
+3. Then the transfers cometh.  You can either transfer the whole export in one shot or have it ask you about each one.  It uses the Namecheap API to create the transfer orders.
+4. Lastly, it praises you gloriously for your hard work and shows you how to speed the transfers up.
+
+=== Gandi
+
+The +ditchdaddy-gandi+ script will walk you through the steps to move your domains to Gandi.net.  
+
+1. It will ask for your Gandi details (your account must be a reseller account AND have API access activated; more information: http://is.gd/gQvxAP) 
+2. Next, you'll need to unlock your domains and get a data export from GoDaddy with the authorization codes (you can follow the instructions here: http://is.gd/2vI0aV).  Unfortunately, GoDaddy does not offer an API for that.
+3. You'll want to figure out your nameservers and get the list (or lists) gathered up; Gandi requires you to supply them when you transfer to them.
+4. Then the transfers cometh.  You can either transfer the whole export in one shot or have it ask you about each one.  It uses the Gandi.net API to create the transfer orders.
+5. Lastly, it praises you gloriously for your hard work and shows you how to speed the transfers up.
 
 == SYNOPSIS:
 
   ditchdaddy-dnsimple
   # or
   ditchdaddy-namecheap
-
+  # or
+  ditchdaddy-gandi
+  
 == REQUIREMENTS:
 
 * rainbow
 * dnsimple
 * highline
 * rest-client
-* Ruby 1.9.x
+* Ruby 1.9.3 (preferably)
 
 == LICENSE:
 
