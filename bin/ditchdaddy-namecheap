@@ -54,7 +54,7 @@ end
 puts "Ready to ditch GoDaddy for Namecheap?" + "  LET'S DO THIS THING.".color(:red).bright
 puts
 
-puts "First, I need your Namecheap details.".color(:magenta)
+puts "First, I need your Namecheap details.\nMake sure you're enabled for API access: http://is.gd/MpVI5T".color(:magenta)
 username = nil
 api_key = nil
 
@@ -99,13 +99,13 @@ puts
 puts "OK, this is getting serious now."
 puts "Should I just transfer every domain I can or ask you about each one?".color(:cyan).bright
 
-ask = ask("Say 'ask' or 'transfer': ") {|q| q.validate = /(^ask$)|(^transfer$)/ }
-ask = (ask == "ask")
+prompt = ask("Say 'ask' or 'transfer': ") {|q| q.validate = /(^ask$)|(^transfer$)/ }
+prompt = (prompt == "ask")
 
 puts
 
 csv.each do |row|  
-  if ask
+  if prompt
     response = ask("Transfer " + row['DomainName'].bright.color(:yellow) + " to Namecheap? (yes/no)") {|q| q.validate = /(^yes$)|(^no$)/ }
     if response == 'no'
       puts "\tOK, cow(boy|girl).  Skipping that guy..."
