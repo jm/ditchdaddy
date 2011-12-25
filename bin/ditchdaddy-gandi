@@ -1,0 +1,182 @@
+#!/usr/bin/env ruby
+
+require 'rubygems'
+
+require 'rainbow'
+require 'rest-client'
+require 'highline/import'
+require 'xmlrpc/client'
+
+class Gandi
+  def self.base_url
+    "https://api.gandi.net/xmlrpc/"
+  end
+  
+  def self.client
+    @client ||= XMLRPC::Client.new2(base_url)
+  end
+
+  def self.handle
+    @handle
+  end
+  
+  def self.session
+    @session
+  end
+  
+  def self.login(username, password)
+    @session = client.call("login", username, password, false)
+    @handle = username
+  end
+  
+  def self.start_transfer(domain, auth_code, nameservers)
+    client.call("domain_transfer_in", session, domain, handle, handle, handle, handle, nameservers, auth_code)
+  end
+end
+
+if RUBY_VERSION < "1.9"
+  puts
+  puts "--- ATTENTION ---".color(:red).bright.blink
+  puts "You appear to be on Ruby 1.8.  Highline acts weird on 1.8 when retrying after an exception."
+  puts "I recommend you hop up to 1.9.2.  But it's OK.  Whatever.  It's not like I know"
+  puts "anything about how I run or anything.  NO NO.  DONT LISTEN TO ME."
+  puts "--- ATTENTION ---".color(:red).bright.blink
+  puts
+  require 'fastercsv'
+  CSVModule = FasterCSV
+else
+  require 'csv'
+  CSVModule = CSV
+end
+
+puts "Ready to ditch GoDaddy for Gandi?" + "  LET'S DO THIS THING.".color(:red).bright
+puts
+
+puts "First, I need your Gandi details.".color(:magenta)
+puts "Keep in mind: ".color(:yellow).bright.blink + "Your account must be a reseller account AND have API enabled."
+puts "Get more information here: http://is.gd/gQvxAP".bright
+puts
+
+begin
+  username = ask("What's your username (Gandi handle)?".bright)
+  password = ask("What's your password?".bright) {|q| q.echo = "*" }
+
+  Gandi.login(username, password)
+rescue
+  puts
+  puts "ZOMG WTF AUTHENTICATION FAILED!!!".color(:red).bright.blink
+  puts
+  
+  retry
+end
+  
+puts "\nOK, you're verified now.".color(:yellow) + "  Magical, I know, right?\n".bright.color(:yellow)
+puts
+
+file_path = nil
+begin
+  puts "Next, tell me where your data export from GoDaddy is at.\n(Follow instructions here: http://is.gd/2vI0aV)\n".color(:magenta)
+
+  file_path = ask("Where is the data file at?".bright)
+  puts File.join(Dir.pwd, file_path)
+  unless File.exists?(file_path)
+    raise "File fail."
+  end
+rescue
+  puts
+  puts "ZOMG WTF FILE NOT FOUND!!!".color(:red).bright.blink
+  puts
+  
+  retry
+end
+
+puts "\nFile found, now slurpinating it.".bright.color(:yellow)
+
+csv = CSVModule.new(File.open(file_path), :headers => true, :skip_blanks => true)
+
+puts
+puts "Gandi requires that you send along nameservers with your transfer."
+puts "Should I ask you for each one or just use the same set for all domains?".color(:cyan).bright
+
+nameservers_prompt = ask("Say 'ask' or 'same': ") {|q| q.validate = /(^ask$)|(^same$)/ }
+nameservers_prompt = (nameservers_prompt == "ask")
+
+nameservers = nil
+unless nameservers_prompt
+  puts
+  puts "Okie, doke.  " + "What nameservers would you like to use? (Enter them as a comma separated list)".color(:magenta)
+  
+  begin
+    nameservers = ask('Enter your nameservers: ')
+    nameservers = nameservers.split(",")
+  
+    if (nameservers.uniq.length < nameservers.length) || (nameservers.length < 3)
+      puts "Nameservers must be unique and there must be at least 3.".color(:red).bright
+      
+      raise
+    end
+  rescue
+    retry
+  end
+end
+
+puts
+puts "OK, this is getting serious now."
+puts "Should I just transfer every domain I can or ask you about each one?".color(:cyan).bright
+
+prompt = ask("Say 'ask' or 'transfer': ") {|q| q.validate = /(^ask$)|(^transfer$)/ }
+prompt = (prompt == "ask")
+
+puts
+
+csv.each do |row|  
+  if prompt
+    response = ask("Transfer " + row['DomainName'].bright.color(:yellow) + " to Namecheap? (yes/no)") {|q| q.validate = /(^yes$)|(^no$)/ }
+    if response == 'no'
+      puts "\tOK, cow(boy|girl).  Skipping that guy..."
+      puts
+      
+      next
+    end
+  end
+  
+  if nameservers_prompt
+    begin
+      nameservers = ask("Enter nameservers for " + row['DomainName'].bright.color(:yellow) + ": ")
+      nameservers = nameservers.split(",")
+  
+      if (nameservers.uniq.length < nameservers.length) || (nameservers.length < 3)
+        puts "Nameservers must be unique and there must be at least 3.".color(:red).bright
+      
+        raise
+      end
+    rescue
+      retry
+    end
+  end
+  
+  puts "Transferring #{row['DomainName'].bright.color(:yellow)}..."
+  if row['Locked'] != 'Unlocked'
+    puts "\t!".color(:red).bright + " Oops.  You didn't unlock that domain according to this export.  Skipping..."
+    next
+  end
+  
+  begin
+    Gandi.start_transfer(row['DomainName'], row['AuthorizationCode'], nameservers)
+    puts "\t*".color(:cyan).bright + " That worked!"
+  rescue StandardError
+    puts "\t! Well, poop.  There seems to be an error.".color(:red)    
+  end
+end
+
+puts
+puts "Well, we're all done.  Our time together was magical.".color(:cyan)
+puts "I hope it was as good for you as it was for me.  ktnxbai"
+puts "Visit me at http://arcturo.com sometime."
+puts
+puts "--- IMPORTANT ---".color(:magenta).bright.blink
+puts "To speed up the process, follow the instructions here for"
+puts "explicitly approving the transfers: http://is.gd/ZRBLUP"
+puts "Takes much less time than the 5 days it normally takes."
+puts "--- IMPORTANT ---".color(:magenta).bright.blink
+puts
