@@ -10,7 +10,7 @@ $hoe = Hoe.spec 'ditchdaddy' do
   self.developer 'Jeremy McAnally', 'jeremy@arcturo.com'
   self.post_install_message = 'PostInstall.txt' # TODO remove if post-install message not required
   self.rubyforge_name       = self.name # TODO this is default value
-  self.extra_deps         = [['dnsimple-ruby','> 0.0.0'], ['highline','> 0.0.0'], ['rainbow','> 0.0.0']]
+  self.extra_deps         = [['dnsimple-ruby','> 0.0.0'], ['highline','> 0.0.0'], ['rainbow','> 0.0.0'], ['rest-client', '> 0.0.0']]
 end
 
 require 'newgem/tasks'
